@@ -3,55 +3,18 @@ const validator = require('express-validator')
 
 const HttpError = require('../model/http-error');
 const getCoordsForAddress = require('../utils/location')
+const Place = require('../model/places')
 
-let DUMMY_PLACES = [
- {
-   id: 'p1',
-   title: 'Empire State Building',
-   description: 'One of the most famous sky scrapers in the world!',
-   imageUrl:
-     'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/NYC_Empire_State_Building.jpg/640px-NYC_Empire_State_Building.jpg',
-   address: '20 W 34th St, New York, NY 10001',
-   location: {
-     lat: 40.7484405,
-     lng: -73.9878584
-   },
-   creator: 'u1'
- },
- {
-   id: 'p2',
-   title: 'Eiffel Tower',
-   description: "Gustave Eiffel's iconic, wrought-iron 1889 tower, with steps and elevators to observation decks.",
-   imageUrl:
-     'https://lh5.googleusercontent.com/p/AF1QipNyvVnVBBdBpGG0OvSNRuEsiZDnKdCgRKukWRd-=w408-h468-k-no',
-   address: 'Champ de Mars, 5 Av. Anatole France, 75007 Paris, France',
-   location: {
-     lat: 48.8583701,
-     lng: 2.2922926
-   },
-   creator: 'u2'
- },
- {
-   id: 'p3',
-   title: 'India Gate',
-   description: 'Imposing Arc de Triomphe-style gate commemorating the Indian soliders killed in the First World War.',
-   imageUrl:
-     'https://lh5.googleusercontent.com/p/AF1QipNS6BoZ-zyVhszXJHmIf_nDGob-xk8mkFfGUGF3=w408-h270-k-no',
-   address: 'Rajpath, India Gate, New Delhi, Delhi 110001',
-   location: {
-     lat: 28.6129,
-     lng: 77.2295
-   },
-   creator: 'u1'
- }
-];
-
-const getPlaceById = (req, res, next)=>{
+const getPlaceById = async (req, res, next)=>{
  const placeId = req.params.pid;
-
- const place = DUMMY_PLACES.find(p =>{
-  return p.id===placeId;
- })
+  let place;
+ try {
+  place = await Place.findById(placeId)
+ }
+ catch(err){
+  const error = new HttpError('Something went wrong, could not find data', 500)
+    return next(error)
+ }
  if(!place){
   return next(
     new HttpError("No place found with that id ", 404)
@@ -60,12 +23,16 @@ const getPlaceById = (req, res, next)=>{
  res.json({place: place});
 }
 
-const getPlaceByUserId =(req, res, next)=>{
+const getPlaceByUserId =async (req, res, next)=>{
  const userId = req.params.uid;
 
- const place = DUMMY_PLACES.filter(p =>{
-  return p.creator===userId;
- })
+ let place;
+ try{
+  place = await Place.find({creator: userId});
+ }catch(err){
+  const error = new HttpError('Something went wrong, could not find data', 500)
+  return next(error)
+ }
  if(!place || place.length===0){
   return next(
     new HttpError("No place found for that user id ", 404)
@@ -89,46 +56,75 @@ const createPlace=async (req, res, next)=>{
     return next(error);
   }
   
-  const createPlace = {
-    id: uuidv4(),
-    title: title,
-    description: description,
-    address:address,
-    creator:creator,
-    location: coordinates
-  }
+  const createPlace = new Place(
+    {
+      title: title,
+      description: description,
+      address:address,
+      creator:creator,
+      location: coordinates,
+      imageUrl:'https://lh5.googleusercontent.com/p/AF1QipNS6BoZ-zyVhszXJHmIf_nDGob-xk8mkFfGUGF3=w408-h270-k-no'
+    }
+  )
 
-  DUMMY_PLACES.push(createPlace)
+  // DUMMY_PLACES.push(createPlace)
+  try{
+    await createPlace.save();
+  }catch(err){
+    const error = new HttpError('Place creation failed', 500)
+    return next(error)
+  }
+  
 
   res.status(201).json({place:createPlace})
 }
 
-const updatePlaceById=(req, res, next)=>{
+const updatePlaceById= async (req, res, next)=>{
   const errors= validator.validationResult(req)
   if(!errors.isEmpty()){
     console.log(errors)
-    throw new HttpError("Invalid inputs", 422);
+    return next( new HttpError("Invalid inputs", 422));
   }
 
   const {title, description} = req.body;
   const placeId = req.params.pid;
-  const updatePlace = {...DUMMY_PLACES.find(p =>p.id===placeId)}
-  const index = DUMMY_PLACES.findIndex(p =>p.id===placeId)
-  updatePlace.title=title
-  updatePlace.description=description
+  let updatedPlace
+  try {
+    updatedPlace = await Place.findById(placeId)
+   }
+   catch(err){
+    const error = new HttpError('Something went wrong, could not find data', 500)
+      return next(error)
+   }
 
-  DUMMY_PLACES[index] = updatePlace;
-  res.status(200).json({place:updatePlace})
+  updatedPlace.title=title
+  updatedPlace.description=description
+
+  try{
+    await updatedPlace.save()
+  }catch(err){
+    const error = new HttpError('Something went wrong, could not update data', 500)
+      return next(error)
+  }
+  res.status(200).json({place:updatedPlace});
 }
 
-const deletePlace=(req, res, next)=>{
+const deletePlace= async (req, res, next)=>{
   const placeId = req.params.pid;
-
-  const delete_place = DUMMY_PLACES.find(p =>p.id===placeId)
-  if(!delete_place ){
-    throw new HttpError("No place found with that id", 404);
-  }
-  DUMMY_PLACES=DUMMY_PLACES.filter(p =>p.id!==placeId);
+  let place;
+ try{
+  place = await Place.findById(placeId)
+ }
+ catch(err){
+  const error = new HttpError('Something went wrong, could not update data', 500)
+    return next(error)
+ }
+ try{
+  await place.remove()
+}catch(err){
+  const error = new HttpError('Something went wrong, could not update data', 500)
+    return next(error)
+}
   res.status(200).json({message:"Place Deleted"})
 }
 
