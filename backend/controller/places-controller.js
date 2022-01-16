@@ -1,9 +1,10 @@
-const { v4: uuidv4 } = require('uuid');
 const validator = require('express-validator')
 
 const HttpError = require('../model/http-error');
 const getCoordsForAddress = require('../utils/location')
-const Place = require('../model/places')
+const Place = require('../model/places');
+const Users = require('../model/users');
+const mongoose = require('mongoose');
 
 const getPlaceById = async (req, res, next)=>{
  const placeId = req.params.pid;
@@ -66,10 +67,26 @@ const createPlace=async (req, res, next)=>{
       imageUrl:'https://lh5.googleusercontent.com/p/AF1QipNS6BoZ-zyVhszXJHmIf_nDGob-xk8mkFfGUGF3=w408-h270-k-no'
     }
   )
-
-  // DUMMY_PLACES.push(createPlace)
+  let user ;
   try{
-    await createPlace.save();
+    user = await (await Users.findById(creator))
+  }
+  catch(err){
+    const error = new HttpError('Place creation failed, user does not exist', 500)
+    return next(error)
+  }
+  if(!user){
+    const error = new HttpError('User does not exist', 404)
+    return next(error)
+  }
+
+  try{
+    const session = await mongoose.startSession()
+    session.startTransaction()
+     await createPlace.save({session: session});
+     user.places.push(createPlace)
+     await user.save({session: session})
+     await session.commitTransaction()
   }catch(err){
     const error = new HttpError('Place creation failed', 500)
     return next(error)
@@ -113,14 +130,23 @@ const deletePlace= async (req, res, next)=>{
   const placeId = req.params.pid;
   let place;
  try{
-  place = await Place.findById(placeId)
+  place = await Place.findById(placeId).populate('creator')
  }
  catch(err){
-  const error = new HttpError('Something went wrong, could not update data', 500)
+  const error = new HttpError('Something went wrong, could not get data at server' , 500)
     return next(error)
  }
+ if(!place){
+  const error = new HttpError('Place of the given user not found', 404)
+  return next(error)
+ }
  try{
-  await place.remove()
+  const session = await mongoose.startSession()
+  session.startTransaction()
+  await place.remove({session: session})
+  place.creator.places.pull(place)
+  await place.creator.save({session: session})
+     await session.commitTransaction()
 }catch(err){
   const error = new HttpError('Something went wrong, could not update data', 500)
     return next(error)

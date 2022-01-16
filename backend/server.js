@@ -29,4 +29,4 @@ mongoose.connect('mongodb+srv://admin_annanya:password1admin@cluster0.naacr.mong
  console.log("connected to db");
  app.listen(5000);
 })
-.catch(err=> console.log(err))
+.catch(err=> console.log(err));
