@@ -69,7 +69,7 @@ const createPlace=async (req, res, next)=>{
   )
   let user ;
   try{
-    user = await (await Users.findById(creator))
+    user = await Users.findById(creator)
   }
   catch(err){
     const error = new HttpError('Place creation failed, user does not exist', 500)
@@ -91,8 +91,6 @@ const createPlace=async (req, res, next)=>{
     const error = new HttpError('Place creation failed', 500)
     return next(error)
   }
-  
-
   res.status(201).json({place:createPlace})
 }
 

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-
+import React, { useEffect, useState, useContext } from 'react';
+import { useHistory, useParams } from 'react-router-dom';
+import LoadingSpinner from '../../shared/components/UIElements/LoadingSpinner';
 import Input from '../../shared/components/FormElements/Input';
 import Button from '../../shared/components/FormElements/Button';
 import Card from '../../shared/components/UIElements/Card';
@@ -9,54 +9,16 @@ import {
   VALIDATOR_MINLENGTH
 } from '../../shared/util/validators';
 import { useForm } from '../../shared/hooks/form-hook';
+import { useHttpClient } from '../../shared/hooks/http-hook';
 import './PlaceForm.css';
-
-const DUMMY_PLACES = [
-  {
-    id: 'p1',
-    title: 'Empire State Building',
-    description: 'One of the most famous sky scrapers in the world!',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/NYC_Empire_State_Building.jpg/640px-NYC_Empire_State_Building.jpg',
-    address: '20 W 34th St, New York, NY 10001',
-    location: {
-      lat: 40.7484405,
-      lng: -73.9878584
-    },
-    creator: 'u1'
-  },
-  {
-    id: 'p2',
-    title: 'Emp. State Building',
-    description: 'One of the most famous sky scrapers in the world!',
-    imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/NYC_Empire_State_Building.jpg/640px-NYC_Empire_State_Building.jpg',
-    address: '20 W 34th St, New York, NY 10001',
-    location: {
-      lat: 40.7484405,
-      lng: -73.9878584
-    },
-    creator: 'u2'
-  },
-  {
-    id: 'p3',
-    title: 'India Gate',
-    description: 'Imposing Arc de Triomphe-style gate commemorating the Indian soliders killed in the First World War.',
-    imageUrl:
-      'https://lh5.googleusercontent.com/p/AF1QipNS6BoZ-zyVhszXJHmIf_nDGob-xk8mkFfGUGF3=w408-h270-k-no',
-    address: 'Rajpath, India Gate, New Delhi, Delhi 110001',
-    location: {
-      lat: 28.6129,
-      lng: 77.2295
-    },
-    creator: 'u1'
-  }
-];
-
+import ErrorModal from '../../shared/components/UIElements/ErrorModal';
+import { AuthContext } from '../../shared/context/auth-context';
 const UpdatePlace = () => {
-  const [isLoading, setIsLoading] = useState(true);
+  const auth = useContext(AuthContext)
+  const { isLoading, error, sendRequest, clearError } = useHttpClient();
+  const [place, setPlace]=useState()
   const placeId = useParams().placeId;
-
+  const history = useHistory()
   const [formState, inputHandler, setFormData] = useForm(
     {
       title: {
@@ -71,33 +33,51 @@ const UpdatePlace = () => {
     false
   );
 
-  const identifiedPlace = DUMMY_PLACES.find(p => p.id === placeId);
-
-  useEffect(() => {
-    if (identifiedPlace) {
+  useEffect(()=>{
+    const fetchPlace = async()=>{
+      try{
+      const response = await sendRequest(`http://localhost:5000/api/places/${placeId}`);
+      setPlace(response.place);
       setFormData(
         {
           title: {
-            value: identifiedPlace.title,
+            value: response.place.title,
             isValid: true
           },
           description: {
-            value: identifiedPlace.description,
+            value: response.place.description,
             isValid: true
           }
         },
         true
       );
+      }catch(err){ }
     }
-    setIsLoading(false);
-  }, [setFormData, identifiedPlace]);
+    fetchPlace()
+  },[sendRequest, placeId, setFormData])
 
-  const placeUpdateSubmitHandler = event => {
+  const placeUpdateSubmitHandler = async (event) => {
     event.preventDefault();
-    console.log(formState.inputs);
+    try{
+      await sendRequest(`http://localhost:5000/api/places/${placeId}`, 'PATCH',
+      JSON.stringify({
+        title: formState.inputs.title.value,
+        description: formState.inputs.description.value
+      }),
+      {'Content-Type':'application/json'});
+      history.push('/'+auth.userId+'/places');
+    }catch(err){}
   };
 
-  if (!identifiedPlace) {
+  if (isLoading) {
+    return (
+      <div className="center">
+        <LoadingSpinner/>
+      </div>
+    );
+  }
+
+  if (!place && !error) {
     return (
       <div className="center">
         <Card>
@@ -107,16 +87,10 @@ const UpdatePlace = () => {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="center">
-        <h2>Loading...</h2>
-      </div>
-    );
-  }
-
   return (
-    <form className="place-form" onSubmit={placeUpdateSubmitHandler}>
+    <>
+    <ErrorModal error={error} onClear={clearError}/>
+   {!isLoading && place && <form className="place-form" onSubmit={placeUpdateSubmitHandler}>
       <Input
         id="title"
         element="input"
@@ -125,8 +99,8 @@ const UpdatePlace = () => {
         validators={[VALIDATOR_REQUIRE()]}
         errorText="Please enter a valid title."
         onInput={inputHandler}
-        initialValue={formState.inputs.title.value}
-        initialValid={formState.inputs.title.isValid}
+        initialValue={place.title}
+        initialValid={true}
       />
       <Input
         id="description"
@@ -135,13 +109,15 @@ const UpdatePlace = () => {
         validators={[VALIDATOR_MINLENGTH(5)]}
         errorText="Please enter a valid description (min. 5 characters)."
         onInput={inputHandler}
-        initialValue={formState.inputs.description.value}
-        initialValid={formState.inputs.description.isValid}
+        initialValue={place.description}
+        initialValid={true}
       />
       <Button type="submit" disabled={!formState.isValid}>
         UPDATE PLACE
       </Button>
     </form>
+   }
+    </>
   );
 };
 

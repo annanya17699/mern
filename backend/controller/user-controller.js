@@ -68,7 +68,7 @@ const login = async (req, res, next) => {
     const error = new HttpError('Login Failed, invalis credentials!', 401)
     return next(error)
   }
-  res.json({message: 'login'})
+  res.json({message: 'login', user: existingUser})
 }
 
 exports.getAllUsers = getAllUsers;
