@@ -135,7 +135,7 @@ const deletePlace= async (req, res, next)=>{
     return next(error)
  }
  if(!place){
-  const error = new HttpError('Place of the given user not found', 404)
+  const error = new HttpError('Place id not found', 404)
   return next(error)
  }
  try{
@@ -146,7 +146,7 @@ const deletePlace= async (req, res, next)=>{
   await place.creator.save({session: session})
      await session.commitTransaction()
 }catch(err){
-  const error = new HttpError('Something went wrong, could not update data', 500)
+  const error = new HttpError('Something went wrong,could not delete the place', 500)
     return next(error)
 }
   res.status(200).json({message:"Place Deleted"})
