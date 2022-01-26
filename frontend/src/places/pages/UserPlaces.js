@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams } from 'react-router-dom';
 import ErrorModal from '../../shared/components/UIElements/ErrorModal';
 import LoadingSpinner from '../../shared/components/UIElements/LoadingSpinner';
+import { AuthContext } from '../../shared/context/auth-context';
 import { useHttpClient } from '../../shared/hooks/http-hook';
 import PlaceList from '../components/PlaceList';
 
 const UserPlaces = () => {
+  const auth = useContext(AuthContext)
   const { isLoading, error, sendRequest, clearError } = useHttpClient();
   const userId = useParams().userId;
   const [place, setPlace] = useState()
   useEffect(() => {
     const fetchPlaces = async () => {
       try {
-        const responseData = await sendRequest(`http://localhost:5000/api/places/user/${userId}`)
+        const responseData = await sendRequest(`http://localhost:5000/api/places/user/${userId}`, 'DELETE', null , {Authorization: 'Bearer '+auth.token})
         setPlace(responseData.place)
       } catch (err) { }
     }
