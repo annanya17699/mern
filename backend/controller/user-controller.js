@@ -64,7 +64,7 @@ const signup = async(req, res, next) => {
   }
   let token ;
   try{
-  token = jwt.sign({userId: createUser.id, email: createUser.email}, '1QZn8sdRktVxsPGO', {expiresIn: '1h'} ) // secret or private key -> 1QZn8sdRktVxsPGO
+  token = jwt.sign({userId: createUser.id, email: createUser.email}, process.env.SECRET_KEY, {expiresIn: '1h'} ) 
   }catch(err){
     const error = new HttpError('SignUp failed', 500)
     return next(error)
@@ -82,7 +82,7 @@ const login = async (req, res, next) => {
     return next(error)
   }
   if(!existingUser){
-    const error = new HttpError('Login Failed, invalis credentials!', 401)
+    const error = new HttpError('Login Failed, invalis credentials!', 403)
     return next(error)
   }
 
@@ -95,12 +95,12 @@ const login = async (req, res, next) => {
     return next(error)
   } 
   if(!isValidPassword){
-    const error = new HttpError('Login Failed, invalis credentials!', 401)
+    const error = new HttpError('Login Failed, invalis credentials!', 403)
     return next(error)
   }
   let token ;
   try{
-  token = jwt.sign({userId: existingUser.id, email: existingUser.email}, '1QZn8sdRktVxsPGO', {expiresIn: '1h'} ) // secret or private key -> 1QZn8sdRktVxsPGO
+  token = jwt.sign({userId: existingUser.id, email: existingUser.email}, process.env.SECRET_KEY, {expiresIn: '1h'} )
   }catch(err){
     const error = new HttpError('SignUp failed', 500)
     return next(error)

@@ -7,11 +7,13 @@ module.exports = (req, res, next) => {
  }
  try {
   const token = req.headers.authorization.split(' ')[1];
+  //console.log('token', token);
   if (!token) {
-   return next(new Error('Authentication failed'));
+   throw new Error('Authentication failed');
   }
-  const decodedToken = jwt.verify(token, '1QZn8sdRktVxsPGO');
-  req.userData({userId: decodedToken.userId})
+  const decodedToken = jwt.verify(token,  process.env.SECRET_KEY);
+  //console.log('decoded', decodedToken)
+  req.userData={userId: decodedToken.userId}
   next();
  } 
  catch (err) {

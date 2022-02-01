@@ -38,7 +38,7 @@ app.use((error, req, res, next)=>{
  }
  res.status(error.code || 500).json({message:error.message|| 'An unknown error occured'});
 });
-mongoose.connect('mongodb+srv://admin_annanya:password1admin@cluster0.naacr.mongodb.net/places?retryWrites=true&w=majority')
+mongoose.connect(`mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.naacr.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`)
 .then(()=>{
  console.log("connected to db");
  app.listen(5000);

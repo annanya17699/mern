@@ -30,9 +30,9 @@ const NewPlace = () => {
       address: {
         value: '',
         isValid: false
-      }, 
-      image:{
-        value:null,
+      },
+      image: {
+        value: null,
         isValid: false
       }
     },
@@ -48,10 +48,15 @@ const NewPlace = () => {
       formData.append('address', formState.inputs.address.value);
       formData.append('image', formState.inputs.image.value);
       formData.append('creator', auth.userId);
-      
-      await sendRequest('http://localhost:5000/api/places', 'POST', formData, {Authorization: 'Bearer '+auth.token})
+
+      await sendRequest(
+        process.env.REACT_APP_BACKEND_URL+'/places',
+        'POST',
+        formData,
+        { 'Authorization': `Bearer ${auth.token}` }
+      );
       history.push('/')
-    } catch (err) { 
+    } catch (err) {
       console.log(err);
     }
   };
@@ -86,7 +91,7 @@ const NewPlace = () => {
           errorText="Please enter a valid address."
           onInput={inputHandler}
         />
-        <ImageUpload id='image' onInput={inputHandler} errorText='Please provide image'/>
+        <ImageUpload id='image' onInput={inputHandler} errorText='Please provide image' />
         <Button type="submit" disabled={!formState.isValid}>
           ADD PLACE
         </Button>

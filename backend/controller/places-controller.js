@@ -50,7 +50,7 @@ const createPlace=async (req, res, next)=>{
     return next(new HttpError("Invalid inputs", 422));
   }
 
-  const {title, description, address, creator} = req.body;
+  const {title, description, address} = req.body;
   let coordinates
   try{
     coordinates = await getCoordsForAddress(address)
@@ -63,14 +63,14 @@ const createPlace=async (req, res, next)=>{
       title: title,
       description: description,
       address:address,
-      creator:creator,
+      creator: req.userData.userId,
       location: coordinates,
       image:req.file.path
     }
   )
   let user ;
   try{
-    user = await Users.findById(creator)
+    user = await Users.findById(req.userData.userId)
   }
   catch(err){
     const error = new HttpError('Place creation failed, user does not exist', 500)
@@ -112,7 +112,10 @@ const updatePlaceById= async (req, res, next)=>{
     const error = new HttpError('Something went wrong, could not find data', 500)
       return next(error)
    }
-
+  if(updatedPlace.creator.toString() !== req.userData.userId){
+    const error = new HttpError('Unauthorized Access, not allowed to make changes', 401)
+      return next(error)
+  }
   updatedPlace.title=title
   updatedPlace.description=description
 
@@ -139,7 +142,11 @@ const deletePlace= async (req, res, next)=>{
   const error = new HttpError('Place id not found', 404)
   return next(error)
  }
- let imagePath = place.image
+ if(place.creator.id !== req.userData.userId){
+  const error = new HttpError('Unauthorized Access, not allowed to delete', 401)
+    return next(error)
+}
+ const imagePath = place.image
  try{
   const session = await mongoose.startSession()
   session.startTransaction()

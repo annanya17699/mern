@@ -1,0 +1,8 @@
+{
+ "env":{
+  "DB_USER":"admin_annanya",
+  "DB_PASSWORD":"password1admin",
+  "DB_NAME":"mern",
+  "SECRET_KEY":"secret"
+ }
+}
